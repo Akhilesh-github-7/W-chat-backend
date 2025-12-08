@@ -8,15 +8,21 @@ const socketHandler = () => {
 
         // User registers themselves as online
         socket.on('add-user', (userId) => {
-            console.log(`User ${userId} is online.`);
-            onlineUsers.set(userId, socket.id);
-            User.findByIdAndUpdate(userId, { isOnline: true }, { new: true }).exec();
+            if (!onlineUsers.has(userId)) {
+                // This is the user's first connection.
+                console.log(`User ${userId} is online for the first time.`);
+                onlineUsers.set(userId, new Set());
+                User.findByIdAndUpdate(userId, { isOnline: true }, { new: true }).exec();
+                // Broadcast to all other clients that this user is now online
+                socket.broadcast.emit('user-online', userId);
+            }
+            // Add the new socket to the user's set of connections
+            onlineUsers.get(userId).add(socket.id);
 
-            // Send the current list of online users back to the new user
+            console.log(`User ${userId} has a new connection. Total connections: ${onlineUsers.get(userId).size}`);
+
+            // Send the current list of all online users back to this specific client
             socket.emit('get-online-users', Array.from(onlineUsers.keys()));
-            
-            // Broadcast to all other clients that this user is now online
-            socket.broadcast.emit('user-online', userId);
         });
 
         // Join a chat room
@@ -30,8 +36,6 @@ const socketHandler = () => {
         socket.on('stop-typing', (room) => socket.in(room).emit('stop-typing'));
 
         // Listen for a new message
-        // Note: Messages are also sent directly via the controller for immediate response.
-        // This listener is for broadcasting to other clients in the chat room.
         socket.on('send-msg', (data) => {
             const { chatId } = data;
             if (chatId) {
@@ -43,19 +47,23 @@ const socketHandler = () => {
         socket.on('disconnect', () => {
             console.log('User disconnected:', socket.id);
             let disconnectedUserId = null;
-            for (let [userId, socketId] of onlineUsers.entries()) {
-                if (socketId === socket.id) {
+            // Find which user this socket belonged to
+            for (let [userId, socketIds] of onlineUsers.entries()) {
+                if (socketIds.has(socket.id)) {
                     disconnectedUserId = userId;
-                    onlineUsers.delete(userId);
+                    // Remove the disconnected socket from the user's set
+                    socketIds.delete(socket.id);
+                    console.log(`User ${userId} lost a connection. Remaining connections: ${socketIds.size}`);
+                    // If the user has no more active connections, mark them as offline
+                    if (socketIds.size === 0) {
+                        onlineUsers.delete(userId);
+                        User.findByIdAndUpdate(userId, { isOnline: false }, { new: true }).exec();
+                        // Broadcast to all clients that this user is now offline
+                        global.io.emit('user-offline', userId);
+                        console.log(`User ${userId} is now fully offline.`);
+                    }
                     break;
                 }
-            }
-
-            if (disconnectedUserId) {
-                User.findByIdAndUpdate(disconnectedUserId, { isOnline: false }, { new: true }).exec();
-                 // Broadcast to all clients that this user is now offline
-                global.io.emit('user-offline', disconnectedUserId);
-                console.log(`User ${disconnectedUserId} is offline.`);
             }
         });
     });
