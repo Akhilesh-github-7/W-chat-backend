@@ -11,9 +11,12 @@ const socketHandler = () => {
             console.log(`User ${userId} is online.`);
             onlineUsers.set(userId, socket.id);
             User.findByIdAndUpdate(userId, { isOnline: true }, { new: true }).exec();
+
+            // Send the current list of online users back to the new user
+            socket.emit('get-online-users', Array.from(onlineUsers.keys()));
             
-            // Broadcast to all clients that this user is now online
-            global.io.emit('user-online', userId);
+            // Broadcast to all other clients that this user is now online
+            socket.broadcast.emit('user-online', userId);
         });
 
         // Join a chat room
