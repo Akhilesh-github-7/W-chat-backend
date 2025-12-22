@@ -34,6 +34,7 @@ const searchUsers = async (req, res) => {
 // @route   PUT /api/users/profile
 // @access  Private
 const updateUserProfile = async (req, res) => {
+  console.log('updateUserProfile req.body:', req.body);
   try {
     const user = await User.findById(req.user._id);
 
