@@ -7,12 +7,12 @@ const socketHandler = () => {
         console.log('A user connected:', socket.id);
 
         // User registers themselves as online
-        socket.on('add-user', (userId) => {
+        socket.on('add-user', async (userId) => {
             if (!onlineUsers.has(userId)) {
                 // This is the user's first connection.
                 console.log(`User ${userId} is online for the first time.`);
                 onlineUsers.set(userId, new Set());
-                User.findByIdAndUpdate(userId, { isOnline: true }, { new: true }).exec();
+                await User.findByIdAndUpdate(userId, { isOnline: true }, { new: true }).exec();
                 // Broadcast to all other clients that this user is now online
                 socket.broadcast.emit('user-online', userId);
             }
@@ -44,7 +44,7 @@ const socketHandler = () => {
         });
 
         // Handle disconnection
-        socket.on('disconnect', () => {
+        socket.on('disconnect', async () => {
             console.log('User disconnected:', socket.id);
             let disconnectedUserId = null;
             // Find which user this socket belonged to
@@ -57,9 +57,9 @@ const socketHandler = () => {
                     // If the user has no more active connections, mark them as offline
                     if (socketIds.size === 0) {
                         onlineUsers.delete(userId);
-                        User.findByIdAndUpdate(userId, { isOnline: false }, { new: true }).exec();
+                        await User.findByIdAndUpdate(userId, { isOnline: false }, { new: true }).exec();
                         // Broadcast to all clients that this user is now offline
-                        global.io.emit('user-offline', userId);
+                        global.io.emit('user-offline', disconnectedUserId); // Use disconnectedUserId here
                         console.log(`User ${userId} is now fully offline.`);
                     }
                     break;
