@@ -75,18 +75,18 @@ const uploadAvatar = async (req, res) => {
             return res.status(400).json({ msg: 'No file uploaded' });
         }
 
-        // The path should be relative to the 'uploads' directory
         const avatarPath = `avatars/${req.file.filename}`;
-
-        user.avatar = avatarPath;
-        await user.save();
-
-        // Construct the full URL to be sent to the client
+        
+        // Construct the full URL for the avatar
         const fullAvatarUrl = `${process.env.BACKEND_URL}/uploads/${avatarPath}`;
 
-        res.json({ avatar: avatarPath });
+        // Save the full URL to the user's avatar field
+        user.avatar = fullAvatarUrl;
+        await user.save();
+
+        res.json({ avatar: fullAvatarUrl });
     } catch (err) {
-        console.error(err.message);
+        console.error('Error in uploadAvatar:', err.message);
         res.status(500).send('Server Error');
     }
 };
