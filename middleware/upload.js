@@ -1,23 +1,8 @@
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 
-// Create the uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, '../uploads/avatars');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Set up storage engine
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    // req.user is added by the auth middleware
-    cb(null, `${req.user._id}-${Date.now()}${path.extname(file.originalname)}`);
-  }
-});
+// Set up storage engine (Memory Storage for MongoDB)
+const storage = multer.memoryStorage();
 
 // Check file type
 function checkFileType(file, cb) {

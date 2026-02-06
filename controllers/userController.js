@@ -75,13 +75,16 @@ const uploadAvatar = async (req, res) => {
             return res.status(400).json({ msg: 'No file uploaded' });
         }
 
-        const avatarPath = `avatars/${req.file.filename}`;
+        // Convert buffer to base64
+        const b64 = Buffer.from(req.file.buffer).toString('base64');
+        const mimeType = req.file.mimetype;
+        const avatarData = `data:${mimeType};base64,${b64}`;
         
-        // Save only the relative path to the database
-        user.avatar = avatarPath;
+        // Save the base64 string to the database
+        user.avatar = avatarData;
         await user.save();
 
-        res.json({ avatar: avatarPath });
+        res.json({ avatar: avatarData });
     } catch (err) {
         console.error('Error in uploadAvatar:', err.message);
         res.status(500).send('Server Error');
