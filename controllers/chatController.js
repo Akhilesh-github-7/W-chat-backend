@@ -130,6 +130,8 @@ const sendMessage = async (req, res) => {
         // Construct the relative path from the base uploads directory
         const relativePath = path.relative(path.join(__dirname, '../uploads'), req.file.path);
         newMessage.file = relativePath;
+        newMessage.fileName = req.file.originalname;
+        newMessage.fileSize = req.file.size;
     }
 
     try {
